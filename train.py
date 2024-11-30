@@ -42,13 +42,22 @@ def main(config):
     logger.info(model)
 
     # get function handles of loss and metrics
-    loss_function = instantiate(config.loss_function).to(device)
+    D_loss_function = instantiate(config.D_loss_function).to(device)
+    G_loss_function = instantiate(config.G_loss_function).to(device)
     metrics = instantiate(config.metrics)
 
-    # build optimizer, learning rate scheduler
-    trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = instantiate(config.optimizer, params=trainable_params)
-    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer)
+    # build optimizers, learning rate schedulers
+    discriminator_trainable_params = (
+        list(filter(lambda p: p.requires_grad, model.mpd_discriminator.parameters())) + \
+        list(filter(lambda p: p.requires_grad, model.msd_discriminator.parameters()))
+    )
+    
+    D_optimizer = instantiate(config.D_optimizer, params=discriminator_trainable_params)
+    D_lr_scheduler = instantiate(config.D_lr_scheduler, optimizer=D_optimizer)
+    
+    generator_trainable_params = filter(lambda p: p.requires_grad, model.generator.parameters())
+    G_optimizer = instantiate(config.G_optimizer, params=generator_trainable_params)
+    G_lr_scheduler = instantiate(config.G_lr_scheduler, optimizer=G_optimizer)
 
     # epoch_len = number of iterations for iteration-based training
     # epoch_len = None or len(dataloader) for epoch-based training
@@ -56,10 +65,13 @@ def main(config):
 
     trainer = Trainer(
         model=model,
-        criterion=loss_function,
+        D_criterion=D_loss_function,
+        G_criterion=G_loss_function,
         metrics=metrics,
-        optimizer=optimizer,
-        lr_scheduler=lr_scheduler,
+        D_optimizer=D_optimizer,
+        G_optimizer=G_optimizer,
+        D_lr_scheduler=D_lr_scheduler,
+        G_lr_scheduler=G_lr_scheduler,
         config=config,
         device=device,
         dataloaders=dataloaders,

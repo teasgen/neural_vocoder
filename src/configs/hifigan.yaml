@@ -1,0 +1,45 @@
+defaults:
+  - model: hifigan
+  - writer: wandb
+  - metrics: dummy_vocoder
+  - datasets: ljspeech
+  - dataloader: example
+  - transforms: example
+  - _self_
+
+D_optimizer:
+  _target_: torch.optim.Adam
+  lr: 3e-4
+D_lr_scheduler:
+  _target_: torch.optim.lr_scheduler.StepLR
+  gamma: 0.9
+  step_size: ${trainer.epoch_len}
+
+G_optimizer:
+  _target_: torch.optim.Adam
+  lr: 3e-4
+G_lr_scheduler:
+  _target_: torch.optim.lr_scheduler.StepLR
+  gamma: 0.9
+  step_size: ${trainer.epoch_len}
+
+
+D_loss_function:
+  _target_: src.loss.HiFiGANLossDiscriminator
+
+G_loss_function:
+  _target_: src.loss.HiFiGANLossGenerator
+
+trainer:
+  log_step: 50
+  n_epochs: 20
+  epoch_len: 200
+  device_tensors: ["wav", "mel_spectrogram"]
+  resume_from: null
+  device: auto
+  override: True
+  monitor: "min test_loss_G"
+  save_period: 5
+  early_stop: ${trainer.n_epochs}
+  save_dir: "saved"
+  seed: 1

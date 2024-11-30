@@ -1,3 +1,7 @@
+import gc
+
+import torch
+
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 
@@ -32,27 +36,49 @@ class Trainer(BaseTrainer):
         metric_funcs = self.metrics["inference"]
         if self.is_train:
             metric_funcs = self.metrics["train"]
-            self.optimizer.zero_grad()
+            self.D_optimizer.zero_grad()
 
+        self.model.detach_generator()
         outputs = self.model(**batch)
         batch.update(outputs)
+        del outputs
 
-        all_losses = self.criterion(**batch)
+        all_losses = self.D_criterion(**batch)
         batch.update(all_losses)
 
         if self.is_train:
-            batch["loss"].backward()  # sum of all losses is always called loss
+            batch["loss_D"].backward()
             self._clip_grad_norm()
-            self.optimizer.step()
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
+            self.D_optimizer.step()
+            if self.D_lr_scheduler is not None:
+                self.D_lr_scheduler.step()
+            
+            self.G_optimizer.zero_grad()
 
-        # update metrics for each loss (in case of multiple losses)
+        self.model.train_generator()
+        outputs = self.model(**batch)
+        batch.update(outputs)
+        del outputs
+
+        all_losses = self.G_criterion(**batch)
+        batch.update(all_losses)
+
+        if self.is_train:
+            batch["loss_G"].backward()
+            self._clip_grad_norm()
+            self.G_optimizer.step()
+            if self.G_lr_scheduler is not None:
+                self.G_lr_scheduler.step()
+        # update metrics for each loss
         for loss_name in self.config.writer.loss_names:
             metrics.update(loss_name, batch[loss_name].item())
 
         for met in metric_funcs:
             metrics.update(met.name, met(**batch))
+
+        torch.cuda.empty_cache()
+        gc.collect()
+        # print(batch.keys())
         return batch
 
     def _log_batch(self, batch_idx, batch, mode="train"):

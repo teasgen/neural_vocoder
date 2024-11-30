@@ -18,10 +18,13 @@ class BaseTrainer:
     def __init__(
         self,
         model,
-        criterion,
+        D_criterion,
+        G_criterion,
         metrics,
-        optimizer,
-        lr_scheduler,
+        D_optimizer,
+        G_optimizer,
+        D_lr_scheduler,
+        G_lr_scheduler,
         config,
         device,
         dataloaders,
@@ -38,9 +41,9 @@ class BaseTrainer:
             metrics (dict): dict with the definition of metrics for training
                 (metrics[train]) and inference (metrics[inference]). Each
                 metric is an instance of src.metrics.BaseMetric.
-            optimizer (Optimizer): optimizer for the model.
-            lr_scheduler (LRScheduler): learning rate scheduler for the
-                optimizer.
+            (D/G)_optimizer (Optimizer): optimizer for the D/G.
+            (D/G)_lr_scheduler (LRScheduler): learning rate scheduler for the
+                (D/G)_optimizer.
             config (DictConfig): experiment config containing training config.
             device (str): device for tensors and model.
             dataloaders (dict[DataLoader]): dataloaders for different
@@ -67,9 +70,12 @@ class BaseTrainer:
         self.log_step = config.trainer.get("log_step", 50)
 
         self.model = model
-        self.criterion = criterion
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
+        self.D_criterion = D_criterion
+        self.G_criterion = G_criterion
+        self.D_optimizer = D_optimizer
+        self.G_optimizer = G_optimizer
+        self.D_lr_scheduler = D_lr_scheduler
+        self.G_lr_scheduler = G_lr_scheduler
         self.batch_transforms = batch_transforms
 
         # define dataloaders
@@ -210,6 +216,17 @@ class BaseTrainer:
                     batch,
                     metrics=self.train_metrics,
                 )
+                del batch
+                self.model.cpu()
+                import torch
+                import gc
+                for obj in gc.get_objects():
+                    try:
+                        if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+                            print(type(obj), obj.size())
+                    except: pass
+                self.model.cuda()
+                continue
             except torch.cuda.OutOfMemoryError as e:
                 if self.skip_oom:
                     self.logger.warning("OOM on batch. Skipping batch.")
@@ -224,12 +241,20 @@ class BaseTrainer:
             if batch_idx % self.log_step == 0:
                 self.writer.set_step((epoch - 1) * self.epoch_len + batch_idx)
                 self.logger.debug(
-                    "Train Epoch: {} {} Loss: {:.6f}".format(
-                        epoch, self._progress(batch_idx), batch["loss"].item()
+                    "Train Epoch: {} {} Loss D: {:.6f}".format(
+                        epoch, self._progress(batch_idx), batch["loss_D"].item()
+                    )
+                )
+                self.logger.debug(
+                    "Train Epoch: {} {} Loss G: {:.6f}".format(
+                        epoch, self._progress(batch_idx), batch["loss_G"].item()
                     )
                 )
                 self.writer.add_scalar(
-                    "learning rate", self.lr_scheduler.get_last_lr()[0]
+                    "D learning rate", self.D_lr_scheduler.get_last_lr()[0]
+                )
+                self.writer.add_scalar(
+                    "G learning rate", self.G_lr_scheduler.get_last_lr()[0]
                 )
                 self._log_scalars(self.train_metrics)
                 self._log_batch(batch_idx, batch)
@@ -467,8 +492,10 @@ class BaseTrainer:
             "arch": arch,
             "epoch": epoch,
             "state_dict": self.model.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
-            "lr_scheduler": self.lr_scheduler.state_dict(),
+            "D_optimizer": self.D_optimizer.state_dict(),
+            "G_optimizer": self.G_optimizer.state_dict(),
+            "D_lr_scheduler": self.D_lr_scheduler.state_dict(),
+            "G_lr_scheduler": self.G_lr_scheduler.state_dict(),
             "monitor_best": self.mnt_best,
             "config": self.config,
         }
@@ -513,17 +540,21 @@ class BaseTrainer:
 
         # load optimizer state from checkpoint only when optimizer type is not changed.
         if (
-            checkpoint["config"]["optimizer"] != self.config["optimizer"]
-            or checkpoint["config"]["lr_scheduler"] != self.config["lr_scheduler"]
+            checkpoint["config"]["D_optimizer"] != self.config["D_optimizer"]
+            or checkpoint["config"]["G_optimizer"] != self.config["G_optimizer"]
+            or checkpoint["config"]["D_lr_scheduler"] != self.config["D_lr_scheduler"]
+            or checkpoint["config"]["G_lr_scheduler"] != self.config["G_lr_scheduler"]
         ):
             self.logger.warning(
-                "Warning: Optimizer or lr_scheduler given in the config file is different "
+                "Warning: Optimizers or lr_schedulers given in the config file are different "
                 "from that of the checkpoint. Optimizer and scheduler parameters "
                 "are not resumed."
             )
         else:
-            self.optimizer.load_state_dict(checkpoint["optimizer"])
-            self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
+            self.D_optimizer.load_state_dict(checkpoint["D_optimizer"])
+            self.G_optimizer.load_state_dict(checkpoint["G_optimizer"])
+            self.D_lr_scheduler.load_state_dict(checkpoint["D_lr_scheduler"])
+            self.G_lr_scheduler.load_state_dict(checkpoint["G_lr_scheduler"])
 
         self.logger.info(
             f"Checkpoint loaded. Resume training from epoch {self.start_epoch}"

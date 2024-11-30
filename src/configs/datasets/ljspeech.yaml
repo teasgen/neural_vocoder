@@ -1,0 +1,9 @@
+train:
+  _target_: src.datasets.LJspeechDataset
+  audio_length_limit: 22050
+  part: "train"
+  instance_transforms: ${transforms.instance_transforms.train}
+test:
+  _target_: src.datasets.LJspeechDataset
+  part: "test"
+  instance_transforms: ${transforms.instance_transforms.train}

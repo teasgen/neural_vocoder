@@ -3,7 +3,11 @@ import random
 from typing import List
 
 import torch
+import torchaudio
+import numpy as np
 from torch.utils.data import Dataset
+
+from src.model.mel_spec import MelSpectrogram, MelSpectrogramConfig
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +22,7 @@ class BaseDataset(Dataset):
     """
 
     def __init__(
-        self, index, limit=None, shuffle_index=False, instance_transforms=None
+        self, index, target_sr=16000, audio_length_limit=44100, limit=None, shuffle_index=False, instance_transforms=None
     ):
         """
         Args:
@@ -39,6 +43,9 @@ class BaseDataset(Dataset):
         self._index: List[dict] = index
 
         self.instance_transforms = instance_transforms
+        self.target_sr = target_sr
+        self.audio_length_limit = audio_length_limit
+        self.mel_transform = MelSpectrogram(MelSpectrogramConfig())
 
     def __getitem__(self, ind):
         """
@@ -56,12 +63,24 @@ class BaseDataset(Dataset):
                 (a single dataset element).
         """
         data_dict = self._index[ind]
-        data_path = data_dict["path"]
-        data_object = self.load_object(data_path)
-        data_label = data_dict["label"]
+        audio_path = data_dict["path"]
+        audio = self.load_audio(audio_path)
+        audio = self.random_subaudio(audio, self.audio_length_limit)
 
-        instance_data = {"data_object": data_object, "labels": data_label}
-        instance_data = self.preprocess_data(instance_data)
+        if "text" in data_dict:
+            text = data_dict["text"]
+        else:
+            text = None
+
+        instance_data = {
+            "wav": audio,
+            "text": text,
+            "audio_path": audio_path,
+        }
+        spectrogram = self.get_spectrogram(audio)
+        instance_data.update({"mel_spectrogram": spectrogram})
+
+        instance_data = self.preprocess_data(instance_data, special_keys=["get_spectrogram"])
 
         return instance_data
 
@@ -83,7 +102,35 @@ class BaseDataset(Dataset):
         data_object = torch.load(path)
         return data_object
 
-    def preprocess_data(self, instance_data):
+    def random_subaudio(self, audio, length):
+        _, len_wav = audio.shape
+        if len_wav < length:
+            return audio
+        l_ed = np.random.randint(low=0, high=len_wav - length)
+        return audio[..., l_ed: l_ed+length]
+
+    def load_audio(self, path):
+        audio_tensor, sr = torchaudio.load(path)
+        audio_tensor = audio_tensor[0:1, :]  # remove all channels but the first
+        target_sr = self.target_sr
+        if sr != target_sr:
+            audio_tensor = torchaudio.functional.resample(audio_tensor, sr, target_sr)
+        return audio_tensor
+
+    def get_spectrogram(self, audio):
+        """
+        Special instance transform with a special key to
+        get spectrogram from audio.
+
+        Args:
+            audio (Tensor): original audio.
+        Returns:
+            spectrogram (Tensor): spectrogram for the audio.
+        """
+        return self.mel_transform(audio)
+
+
+    def preprocess_data(self, instance_data, special_keys=["get_spectrogram"]):
         """
         Preprocess data with instance transforms.
 
@@ -92,16 +139,21 @@ class BaseDataset(Dataset):
         Args:
             instance_data (dict): dict, containing instance
                 (a single dataset element).
+            single_key: optional[str]: if set modifies only this key
         Returns:
             instance_data (dict): dict, containing instance
                 (a single dataset element) (possibly transformed via
                 instance transform).
         """
-        if self.instance_transforms is not None:
-            for transform_name in self.instance_transforms.keys():
-                instance_data[transform_name] = self.instance_transforms[
-                    transform_name
-                ](instance_data[transform_name])
+        if self.instance_transforms is None:
+            return instance_data
+
+        for transform_name in self.instance_transforms.keys():
+            if transform_name in special_keys:
+                continue  # skip special key
+            instance_data[transform_name] = self.instance_transforms[
+                transform_name
+            ](instance_data[transform_name])
         return instance_data
 
     @staticmethod
@@ -141,10 +193,6 @@ class BaseDataset(Dataset):
         for entry in index:
             assert "path" in entry, (
                 "Each dataset item should include field 'path'" " - path to audio file."
-            )
-            assert "label" in entry, (
-                "Each dataset item should include field 'label'"
-                " - object ground-truth label."
             )
 
     @staticmethod

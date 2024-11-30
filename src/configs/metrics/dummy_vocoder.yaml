@@ -1,0 +1,10 @@
+device: "auto"
+train:
+  - _target_: src.metrics.L1MelMetric
+    device: ${metrics.device}
+    name: "TRAIN_L1MelMetric"
+
+inference:
+  - _target_: src.metrics.L1MelMetric
+    device: ${metrics.device}
+    name: "test_L1MelMetric"
