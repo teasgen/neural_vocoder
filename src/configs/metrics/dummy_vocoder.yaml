@@ -7,4 +7,4 @@ train:
 inference:
   - _target_: src.metrics.L1MelMetric
     device: ${metrics.device}
-    name: "test_L1MelMetric"
+    name: "L1MelMetric"

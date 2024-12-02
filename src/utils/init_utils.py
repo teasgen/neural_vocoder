@@ -37,9 +37,11 @@ def set_random_seed(seed):
     """
     # fix random seeds for reproducibility
     torch.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.deterministic = True
     # benchmark=True works faster but reproducibility decreases
-    torch.backends.cudnn.benchmark = False
+    # torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = False
+    torch.backends.cudnn.benchmark = True
     np.random.seed(seed)
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)

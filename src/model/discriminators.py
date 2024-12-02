@@ -1,28 +1,30 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils import weight_norm, spectral_norm
 
 
 class SingleMPD(nn.Module):
-    def __init__(self, period: int):
+    def __init__(self, period: int, norm_function: callable):
         super().__init__()
         self.period = period
+        self.norm_function = norm_function
 
         self.convs = []
         last_ch = 1
         for idx in range(1, 5):
-            now_ch = 2 ** (5 + idx)
+            now_ch = 2 ** (6 + idx)
             self.convs += self.single_block(last_ch, now_ch)
             last_ch = now_ch
         self.convs += self.single_block(last_ch, 1024)
         self.convs = nn.ModuleList(self.convs)
-
-        self.out_conv = nn.Conv2d(1024, 1, kernel_size=(3, 1), stride=(3, 1))
+        self.act = nn.LeakyReLU(0.1)
+        self.out_conv = self.norm_function(nn.Conv2d(1024, 1, kernel_size=(3, 1), stride=(3, 1)))
 
 
     def single_block(self, ch_in, ch_out):
         return [
-            nn.Conv2d(ch_in, ch_out, kernel_size=(5, 1), stride=(3, 1), padding=(2, 0)),
+            self.norm_function(nn.Conv2d(ch_in, ch_out, kernel_size=(5, 1), stride=(3, 1), padding=(2, 0))),
         ]
 
     def forward(self, x):
@@ -37,7 +39,7 @@ class SingleMPD(nn.Module):
 
         features = []
         for module in self.convs:
-            x = F.leaky_relu(module(x))
+            x = self.act(module(x))
             features += [x]
 
         x = self.out_conv(x)
@@ -46,12 +48,13 @@ class SingleMPD(nn.Module):
         x = torch.flatten(x, 1, -1)
 
         return x, features
-   
+
 
 class MPD(nn.Module):
     def __init__(self, periods: list[int]):
         super().__init__()
-        self.mpds = nn.ModuleList([SingleMPD(period) for period in periods])
+        norm_function = weight_norm
+        self.mpds = nn.ModuleList([SingleMPD(period, norm_function=norm_function) for period in periods])
 
     def forward(self, x):
         """
@@ -66,13 +69,14 @@ class MPD(nn.Module):
             all_maps += [cur_features] 
 
         return features, all_maps
-    
+
 class SingleMSD(nn.Module):
     """
     Parameters from https://arxiv.org/pdf/1910.06711
     """
-    def __init__(self):
+    def __init__(self, norm_function: callable):
         super().__init__()
+        self.norm_function = norm_function
 
         self.convs = nn.ModuleList([
             self.single_block(1, 16, kernel_size=15, stride=1),
@@ -82,16 +86,18 @@ class SingleMSD(nn.Module):
             self.single_block(1024, 1024, kernel_size=41, stride=4, groups=256),
             self.single_block(1024, 1024, kernel_size=5, stride=4),
         ])
-        
-        self.out_conv = nn.Conv1d(1024, 1, kernel_size=3, padding="same")
+        self.act = nn.LeakyReLU(0.1)
+        self.out_conv = self.norm_function(nn.Conv1d(1024, 1, kernel_size=3, padding="same"))
 
     def single_block(self, in_ch, out_ch, kernel_size, stride, groups=1):
-        return nn.Conv1d(in_ch, out_ch, kernel_size=kernel_size, stride=stride, groups=groups, padding=kernel_size // 2)
+        return self.norm_function(
+            nn.Conv1d(in_ch, out_ch, kernel_size=kernel_size, stride=stride, groups=groups, padding=kernel_size // 2)
+        )
     
     def forward(self, x):
         features = []
         for module in self.convs:
-            x = F.leaky_relu(module(x))
+            x = self.act(module(x))
             features += [x]
 
         x = self.out_conv(x)
@@ -104,8 +110,10 @@ class SingleMSD(nn.Module):
 class MSD(nn.Module):
     def __init__(self):
         super().__init__()
-        
-        self.msds = nn.ModuleList([SingleMSD() for _ in range(3)])
+
+        self.msds = nn.ModuleList([
+            SingleMSD(spectral_norm if idx == 0 else weight_norm) for idx in range(3)
+        ])
         self.poolings = nn.ModuleList([
             nn.Identity(),
             nn.AvgPool1d(4, 2, padding=2),

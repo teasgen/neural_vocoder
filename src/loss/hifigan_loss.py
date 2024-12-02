@@ -24,7 +24,7 @@ class HiFiGANLossGenerator(nn.Module):
     def generator_loss(self, disc_pred_out):
         loss = 0.0
         for disc_pred in disc_pred_out:
-            loss += (disc_pred - 1).mean() ** 2
+            loss += torch.mean((disc_pred - 1) ** 2)
         return loss
 
 
@@ -41,7 +41,7 @@ class HiFiGANLossGenerator(nn.Module):
         **batch
     ):
         loss_mel = F.l1_loss(spec, gen_spec)
-        
+
         loss_gen = self.generator_loss(msd_gen_features) + self.generator_loss(mpd_gen_features)
 
         loss_feature_matching = self.feature_matching_loss(msd_gt_map_features, msd_gen_map_features) + \
@@ -60,7 +60,7 @@ class HiFiGANLossDiscriminator(nn.Module):
     def discriminator_loss(self, disc_gt_out, disc_pred_out):
         loss = 0.0
         for disc_gt, disc_pred in zip(disc_gt_out, disc_pred_out):
-            loss += ((disc_gt - 1).mean() ** 2 + disc_pred.mean() ** 2)
+            loss += (torch.mean((disc_gt - 1) ** 2) + torch.mean(disc_pred ** 2))
         return loss
 
 

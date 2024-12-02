@@ -1,9 +1,6 @@
-import gc
-
-import torch
-
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
+from src.logger.utils import plot_spectrogram
 
 
 class Trainer(BaseTrainer):
@@ -38,34 +35,32 @@ class Trainer(BaseTrainer):
             metric_funcs = self.metrics["train"]
             self.D_optimizer.zero_grad()
 
-        self.model.detach_generator()
+        self.model.freeze_gen(True)
         outputs = self.model(**batch)
         batch.update(outputs)
-        del outputs
 
         all_losses = self.D_criterion(**batch)
         batch.update(all_losses)
 
         if self.is_train:
             batch["loss_D"].backward()
-            self._clip_grad_norm()
+            self._clip_grad_norm(generator=False)
             self.D_optimizer.step()
             if self.D_lr_scheduler is not None:
                 self.D_lr_scheduler.step()
             
             self.G_optimizer.zero_grad()
 
-        self.model.train_generator()
+        self.model.freeze_gen(False)
         outputs = self.model(**batch)
         batch.update(outputs)
-        del outputs
 
         all_losses = self.G_criterion(**batch)
         batch.update(all_losses)
 
         if self.is_train:
             batch["loss_G"].backward()
-            self._clip_grad_norm()
+            self._clip_grad_norm(generator=True)
             self.G_optimizer.step()
             if self.G_lr_scheduler is not None:
                 self.G_lr_scheduler.step()
@@ -74,12 +69,24 @@ class Trainer(BaseTrainer):
             metrics.update(loss_name, batch[loss_name].item())
 
         for met in metric_funcs:
-            metrics.update(met.name, met(**batch))
+            metrics.update(met.name, met(**batch).item())
 
-        torch.cuda.empty_cache()
-        gc.collect()
-        # print(batch.keys())
         return batch
+
+    def log_spectrogram(self, batch_idx, mode, mel_spectrogram, **batch):
+        spectrogram_for_plot = mel_spectrogram[0].detach().cpu()
+        image = plot_spectrogram(spectrogram_for_plot)
+        self.writer.add_image(f"{mode}_true_spectrogram", image)
+
+        if "gen_spec" in batch:
+            spectrogram_for_plot = batch["gen_spec"][0][0].detach().cpu()
+            image = plot_spectrogram(spectrogram_for_plot)
+            self.writer.add_image(f"{mode}_gen_spectrogram", image)
+
+    def log_audio(self, batch_idx, mode, gen_wav, **batch):
+        self.writer.add_audio(f"{mode}_gen_audio", gen_wav[0], sample_rate=22050)
+        if "wav" in batch:
+            self.writer.add_audio(f"{mode}_true_audio", batch["wav"][0], sample_rate=22050)
 
     def _log_batch(self, batch_idx, batch, mode="train"):
         """
@@ -93,13 +100,9 @@ class Trainer(BaseTrainer):
             mode (str): train or inference. Defines which logging
                 rules to apply.
         """
-        # method to log data from you batch
-        # such as audio, text or images, for example
-
-        # logging scheme might be different for different partitions
-        if mode == "train":  # the method is called only every self.log_step steps
-            # Log Stuff
-            pass
+        if mode == "train":
+            self.log_spectrogram(batch_idx, mode, **batch)
+            self.log_audio(batch_idx, mode, **batch)
         else:
-            # Log Stuff
-            pass
+            self.log_spectrogram(batch_idx, mode, **batch)
+            self.log_audio(batch_idx, mode, **batch)

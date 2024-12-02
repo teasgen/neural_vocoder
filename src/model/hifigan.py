@@ -9,7 +9,7 @@ from .mel_spec import MelSpectrogram, MelSpectrogramConfig
 class HiFiGAN(nn.Module):
     def __init__(self, mel_channels: int = 80, hu: int = 128, ku: list[int] = [16, 16, 4, 4], kr: list[int] = [3, 7, 11], dr: list[int] = [1, 3, 5]):
         super().__init__()
-        
+
         self.generator = Generator(
             mel_channels=mel_channels,
             hu=hu,
@@ -23,17 +23,15 @@ class HiFiGAN(nn.Module):
         self.msd_discriminator = MSD()
 
         self.mel_transform = MelSpectrogram(MelSpectrogramConfig())
+        self._freeze_gen = False
 
-        self._train_generator = True
-
-    def train_generator(self):
-        self._train_generator = True
-
-    def detach_generator(self):
-        self._train_generator = False
+    def freeze_gen(self, freeze=True):
+        self._freeze_gen = freeze
 
     def forward(self, mel_spectrogram, **batch):
         gen_wav = self.generator(mel_spectrogram)
+        if self._freeze_gen:
+            gen_wav = gen_wav.detach()
 
         wav = batch.get("wav")
 
@@ -44,13 +42,12 @@ class HiFiGAN(nn.Module):
             }
         if len(wav.shape) == 2:
             wav = wav.unsqueeze(1)
+        if len(mel_spectrogram.shape) == 3:
+            mel_spectrogram = mel_spectrogram.unsqueeze(1)
 
         gen_wav = gen_wav[..., : wav.shape[-1]]
 
         gen_spec = self.mel_transform(gen_wav)
-        
-        if not self._train_generator:
-            gen_wav = gen_wav.detach()
 
         msd_gen_features, msd_gen_map_features = self.msd_discriminator(gen_wav)
         mpd_gen_features, mpd_gen_map_features = self.mpd_discriminator(gen_wav)

@@ -1,4 +1,5 @@
 import warnings
+import itertools
 
 import hydra
 import torch
@@ -10,7 +11,6 @@ from src.trainer import Trainer
 from src.utils.init_utils import set_random_seed, setup_saving_and_logging
 
 warnings.filterwarnings("ignore", category=UserWarning)
-
 
 @hydra.main(version_base=None, config_path="src/configs", config_name="baseline")
 def main(config):
@@ -47,9 +47,9 @@ def main(config):
     metrics = instantiate(config.metrics)
 
     # build optimizers, learning rate schedulers
-    discriminator_trainable_params = (
-        list(filter(lambda p: p.requires_grad, model.mpd_discriminator.parameters())) + \
-        list(filter(lambda p: p.requires_grad, model.msd_discriminator.parameters()))
+    discriminator_trainable_params = itertools.chain(
+        filter(lambda p: p.requires_grad, model.mpd_discriminator.parameters()),
+        filter(lambda p: p.requires_grad, model.msd_discriminator.parameters())
     )
     
     D_optimizer = instantiate(config.D_optimizer, params=discriminator_trainable_params)

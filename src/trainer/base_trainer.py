@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import itertools
 
 import torch
 from numpy import inf
@@ -125,7 +126,8 @@ class BaseTrainer:
         self.metrics = metrics
         self.train_metrics = MetricTracker(
             *self.config.writer.loss_names,
-            "grad_norm",
+            "G grad_norm",
+            "D grad_norm",
             *[m.name for m in self.metrics["train"]],
             writer=self.writer,
         )
@@ -216,17 +218,6 @@ class BaseTrainer:
                     batch,
                     metrics=self.train_metrics,
                 )
-                del batch
-                self.model.cpu()
-                import torch
-                import gc
-                for obj in gc.get_objects():
-                    try:
-                        if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
-                            print(type(obj), obj.size())
-                    except: pass
-                self.model.cuda()
-                continue
             except torch.cuda.OutOfMemoryError as e:
                 if self.skip_oom:
                     self.logger.warning("OOM on batch. Skipping batch.")
@@ -235,7 +226,8 @@ class BaseTrainer:
                 else:
                     raise e
 
-            self.train_metrics.update("grad_norm", self._get_grad_norm())
+            self.train_metrics.update("G grad_norm", self._get_grad_norm(generator=True))
+            self.train_metrics.update("D grad_norm", self._get_grad_norm(generator=False))
 
             # log current results
             if batch_idx % self.log_step == 0:
@@ -398,18 +390,25 @@ class BaseTrainer:
                 )
         return batch
 
-    def _clip_grad_norm(self):
+    def _clip_grad_norm(self, generator=True):
         """
         Clips the gradient norm by the value defined in
         config.trainer.max_grad_norm
         """
-        if self.config["trainer"].get("max_grad_norm", None) is not None:
+        if self.config["trainer"].get("G_max_grad_norm", None) is not None and generator:
             clip_grad_norm_(
-                self.model.parameters(), self.config["trainer"]["max_grad_norm"]
+                self.model.generator.parameters(), self.config["trainer"]["G_max_grad_norm"]
+            )
+        if self.config["trainer"].get("D_max_grad_norm", None) is not None and not generator:
+            msd_mpd_params = itertools.chain(
+                self.model.mpd_discriminator.parameters(), self.model.msd_discriminator.parameters()
+            )
+            clip_grad_norm_(
+                msd_mpd_params, self.config["trainer"]["D_max_grad_norm"]
             )
 
     @torch.no_grad()
-    def _get_grad_norm(self, norm_type=2):
+    def _get_grad_norm(self, norm_type=2, generator=True):
         """
         Calculates the gradient norm for logging.
 
@@ -418,15 +417,31 @@ class BaseTrainer:
         Returns:
             total_norm (float): the calculated norm.
         """
-        parameters = self.model.parameters()
-        if isinstance(parameters, torch.Tensor):
-            parameters = [parameters]
-        parameters = [p for p in parameters if p.grad is not None]
-        total_norm = torch.norm(
-            torch.stack([torch.norm(p.grad.detach(), norm_type) for p in parameters]),
-            norm_type,
-        )
-        return total_norm.item()
+        if generator:
+            parameters = self.model.generator.parameters()
+            if isinstance(parameters, torch.Tensor):
+                parameters = [parameters]
+            parameters = [p for p in parameters if p.grad is not None]
+            total_norm = torch.norm(
+                torch.stack([torch.norm(p.grad.detach(), norm_type) for p in parameters]),
+                norm_type,
+            )
+            return total_norm.item()
+        else:
+            msd_parameters = self.model.msd_discriminator.parameters()
+            mpd_parameters = self.model.mpd_discriminator.parameters()
+            if isinstance(msd_parameters, torch.Tensor):
+                msd_parameters = [msd_parameters]
+            if isinstance(mpd_parameters, torch.Tensor):
+                mpd_parameters = [mpd_parameters]
+            msd_parameters = [p for p in msd_parameters if p.grad is not None]
+            mpd_parameters = [p for p in mpd_parameters if p.grad is not None]
+            msd_parameters += mpd_parameters
+            total_norm = torch.norm(
+                torch.stack([torch.norm(p.grad.detach(), norm_type) for p in msd_parameters]),
+                norm_type,
+            )
+            return total_norm.item()
 
     def _progress(self, batch_idx):
         """

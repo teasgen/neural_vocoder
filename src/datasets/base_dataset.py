@@ -22,7 +22,7 @@ class BaseDataset(Dataset):
     """
 
     def __init__(
-        self, index, target_sr=16000, audio_length_limit=44100, limit=None, shuffle_index=False, instance_transforms=None
+        self, index, target_sr=16000, audio_length_limit=44100, rand_split=True, limit=None, shuffle_index=False, instance_transforms=None
     ):
         """
         Args:
@@ -38,7 +38,7 @@ class BaseDataset(Dataset):
                 tensor name.
         """
         self._assert_index_is_valid(index)
-
+        self.rand_split = rand_split
         index = self._shuffle_and_limit_index(index, limit, shuffle_index)
         self._index: List[dict] = index
 
@@ -106,7 +106,10 @@ class BaseDataset(Dataset):
         _, len_wav = audio.shape
         if len_wav < length:
             return audio
-        l_ed = np.random.randint(low=0, high=len_wav - length)
+        if self.rand_split:
+            l_ed = np.random.randint(low=0, high=len_wav - length)
+        else:
+            l_ed = 0
         return audio[..., l_ed: l_ed+length]
 
     def load_audio(self, path):

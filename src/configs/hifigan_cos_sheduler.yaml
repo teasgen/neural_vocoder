@@ -12,16 +12,24 @@ D_optimizer:
   weight_decay: 1e-2
   lr: 2e-4
 D_lr_scheduler:
-  _target_: torch.optim.lr_scheduler.ExponentialLR
-  gamma: 0.999
+  _target_: torch.optim.lr_scheduler.OneCycleLR
+  max_lr: 3e-4
+  pct_start: 0.03
+  steps_per_epoch: ${trainer.epoch_len}
+  epochs: ${trainer.n_epochs}
+  anneal_strategy: cos
 
 G_optimizer:
   _target_: torch.optim.AdamW
   weight_decay: 1e-2
   lr: 3e-4
 G_lr_scheduler:
-  _target_: torch.optim.lr_scheduler.ExponentialLR
-  gamma: 0.999
+  _target_: torch.optim.lr_scheduler.OneCycleLR
+  max_lr: 3e-4
+  pct_start: 0.0
+  steps_per_epoch: ${trainer.epoch_len}
+  epochs: ${trainer.n_epochs}
+  anneal_strategy: cos
 
 
 D_loss_function:
@@ -31,9 +39,9 @@ G_loss_function:
   _target_: src.loss.HiFiGANLossGenerator
 
 trainer:
-  log_step: 100
-  n_epochs: 100
-  epoch_len: 100
+  log_step: 50
+  n_epochs: 200
+  epoch_len: 175
   G_max_grad_norm: 10
   D_max_grad_norm: 10
   device_tensors: ["wav", "mel_spectrogram"]
