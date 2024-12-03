@@ -15,9 +15,11 @@ def collate_fn(dataset_items: list[dict]):
     """
 
     pack_to_tensors_batch_keys = ["mel_spectrogram", "wav"]
-    pack_to_list_batch_keys = ["audio_path", "text"]
+    pack_to_list_batch_keys = ["audio_path", "text", "text_path"]
     result_batch = {}
     for key in pack_to_tensors_batch_keys + pack_to_list_batch_keys:
+        if key not in dataset_items[0]:
+            continue
         lengths = []
         list_of_batch_values = []
         want_tensor = key in pack_to_tensors_batch_keys

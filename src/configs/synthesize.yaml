@@ -1,15 +1,15 @@
 defaults:
   - model: hifigan
-  - metrics: dummy_vocoder
-  - datasets: custom_eval_on_spec
+  - metrics: null
+  - datasets: custom_eval_on_text
   - dataloader: example
   - transforms: example_only_instance
   - _self_
 
 inferencer:
-  device_tensors: ["wav", "mel_spectrogram"]
+  device_tensors: ["mel_spectrogram"]
   device: auto
-  save_path: "saved"
+  save_path: "synthesized"
   seed: 42
   target_sr: 22050
   from_pretrained: "saved/hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero_resume_len22k/checkpoint-epoch450.pth"

@@ -12,6 +12,7 @@ comet_ml
 hydra-core
 einops==0.8.0
 speechbrain==1.0.2
+xformers
 
 black
 isort

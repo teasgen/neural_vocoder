@@ -1,2 +1,4 @@
 from src.datasets.example import ExampleDataset
 from src.datasets.lj_dataset import LJspeechDataset
+from src.datasets.custom_wav_dir_dataset import CustomWavDirDataset
+from src.datasets.custom_text_dir_dataset import CustomTextDirDataset

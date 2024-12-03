@@ -7,7 +7,7 @@ import torchaudio
 import numpy as np
 from torch.utils.data import Dataset
 
-from src.model.mel_spec import MelSpectrogram, MelSpectrogramConfig
+from src.model import MelSpectrogram, MelSpectrogramConfig, FastSpeechWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class BaseDataset(Dataset):
     """
 
     def __init__(
-        self, index, target_sr=16000, audio_length_limit=44100, rand_split=True, limit=None, shuffle_index=False, instance_transforms=None
+        self, index, target_sr=16000, audio_length_limit=44100, rand_split=True, limit=None, shuffle_index=False, instance_transforms=None, text_as_input=False,
     ):
         """
         Args:
@@ -47,6 +47,10 @@ class BaseDataset(Dataset):
         self.audio_length_limit = audio_length_limit
         self.mel_transform = MelSpectrogram(MelSpectrogramConfig())
 
+        self.text_as_input = text_as_input
+        if text_as_input:
+            self.txt2spec = FastSpeechWrapper()
+
     def __getitem__(self, ind):
         """
         Get element from the index, preprocess it, and combine it
@@ -62,22 +66,35 @@ class BaseDataset(Dataset):
             instance_data (dict): dict, containing instance
                 (a single dataset element).
         """
+        instance_data = {}
+
         data_dict = self._index[ind]
-        audio_path = data_dict["path"]
-        audio = self.load_audio(audio_path)
-        audio = self.random_subaudio(audio, self.audio_length_limit)
+        audio_path = data_dict.get("path")
+        text_path = data_dict.get("text_path")
+        if audio_path is None:
+            audio = None
+        else:
+            audio = self.load_audio(audio_path)
+            if self.audio_length_limit is not None:
+                audio = self.random_subaudio(audio, self.audio_length_limit)
+            instance_data.update({"wav": audio})
 
         if "text" in data_dict:
             text = data_dict["text"]
         else:
             text = None
 
-        instance_data = {
-            "wav": audio,
+        instance_data.update({
             "text": text,
             "audio_path": audio_path,
-        }
-        spectrogram = self.get_spectrogram(audio)
+            "text_path": text_path,
+        })
+
+        if self.text_as_input:
+            spectrogram = self.txt2spec(text)
+        else:
+            spectrogram = self.get_spectrogram(audio)
+
         instance_data.update({"mel_spectrogram": spectrogram})
 
         instance_data = self.preprocess_data(instance_data, special_keys=["get_spectrogram"])
@@ -193,10 +210,7 @@ class BaseDataset(Dataset):
                 the dataset. The dict has required metadata information,
                 such as label and object path.
         """
-        for entry in index:
-            assert "path" in entry, (
-                "Each dataset item should include field 'path'" " - path to audio file."
-            )
+        pass
 
     @staticmethod
     def _sort_index(index):

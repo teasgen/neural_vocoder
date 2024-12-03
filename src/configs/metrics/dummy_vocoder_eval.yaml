@@ -1,0 +1,4 @@
+inference:
+  - _target_: src.metrics.L1MelMetric
+    device: ${metrics.device}
+    name: "L1MelMetric"

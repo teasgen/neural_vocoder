@@ -1,0 +1,6 @@
+test:
+  _target_: src.datasets.CustomWavDirDataset
+  target_sr: 22050
+  audio_length_limit: null
+  wav_dir: /home/teasgen/dla/neural_vocoder/test_data
+  instance_transforms: ${transforms.instance_transforms.train}

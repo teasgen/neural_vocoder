@@ -38,10 +38,12 @@ def main(config):
     print(model)
 
     # get metrics
-    metrics = instantiate(config.metrics)
+    metrics = None
+    if hasattr(config, "metrics") and config.metrics is not None:
+        metrics = instantiate(config.metrics)
 
     # save_path for model predictions
-    save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
+    save_path = ROOT_PATH / "data" / config.inferencer.save_path
     save_path.mkdir(exist_ok=True, parents=True)
 
     inferencer = Inferencer(
@@ -58,6 +60,8 @@ def main(config):
     logs = inferencer.run_inference()
 
     for part in logs.keys():
+        if logs[part] is None:
+            continue
         for key, value in logs[part].items():
             full_key = part + "_" + key
             print(f"    {full_key:15s}: {value}")
