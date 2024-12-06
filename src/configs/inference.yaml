@@ -2,7 +2,7 @@ defaults:
   - model: hifigan
   - metrics: dummy_vocoder
   - datasets: custom_eval_on_spec
-  - dataloader: example
+  - dataloader: example_eval
   - transforms: example_only_instance
   - _self_
 
