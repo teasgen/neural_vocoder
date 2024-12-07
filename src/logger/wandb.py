@@ -160,7 +160,7 @@ class WandBWriter:
             {self._object_name(image_name): self.wandb.Image(image)}, step=self.step
         )
 
-    def add_audio(self, audio_name, audio, sample_rate=None):
+    def add_audio(self, audio_name, audio, sample_rate=None, return_only_audio: bool=False):
         """
         Log an audio to the experiment tracker.
 
@@ -170,14 +170,16 @@ class WandBWriter:
             sample_rate (int): audio sample rate.
         """
         audio = audio.detach().cpu().numpy().T
-        self.wandb.log(
-            {
-                self._object_name(audio_name): self.wandb.Audio(
-                    audio, sample_rate=sample_rate
-                )
-            },
-            step=self.step,
-        )
+        audio = self.wandb.Audio(audio, sample_rate=sample_rate)
+        if return_only_audio:
+            return audio
+        else:
+            self.wandb.log(
+                {
+                    self._object_name(audio_name): audio
+                },
+                step=self.step,
+            )
 
     def add_text(self, text_name, text):
         """

@@ -12,7 +12,7 @@ class FastSpeechWrapper():
 
     def __call__(self, text):
         spectrograms = []
-        print(text.split(", "))
+        # print(text.split(", "))
         for cur_text in text.split(", "):
             sequence, seq_length = self.utils.prepare_input_sequence([cur_text + " "])
             total_length = seq_length.item()
@@ -33,14 +33,9 @@ class FastSpeechWrapper():
             lengths.append(torch.tensor([total_length - last_index]).to(seq_length.device))
 
             for seq, cur_len in zip(sequences, lengths):
-                print(seq, cur_len)
                 with torch.no_grad():
                     spectrogram, _, _ = self.model.infer(seq, cur_len)
                 spectrograms.append(spectrogram)
-            # print(sequences, lengths)
-            # with torch.no_grad():
-            #     spectrogram, _, _ = self.model.infer(sequences, lengths)
-            # spectrograms.append(spectrogram)
 
         spectrograms = torch.cat(spectrograms, -1)
         return spectrograms

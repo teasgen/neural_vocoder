@@ -1,6 +1,7 @@
 test:
-  _target_: src.datasets.CustomWavDirDataset
+  _target_: src.datasets.CustomSingleTextDataset
   target_sr: 22050
   audio_length_limit: null
-  wav_dir: /home/teasgen/dla/neural_vocoder/gt_wavs
+  text_as_input: True
+  transcription: "Bla bla bla"
   instance_transforms: ${transforms.instance_transforms.inference}

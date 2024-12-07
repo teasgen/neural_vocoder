@@ -20,6 +20,13 @@
 </a>
 </p>
 
+import nltk
+nltk.download('averaged_perceptron_tagger_eng')
+
+
+
+
+
 ## About
 
 This repository contains a template for [PyTorch](https://pytorch.org/)-based Deep Learning projects.

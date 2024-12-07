@@ -4,4 +4,4 @@ test:
   audio_length_limit: null
   text_as_input: True
   transcription_dir: /home/teasgen/dla/neural_vocoder/test_data_text
-  instance_transforms: ${transforms.instance_transforms.train}
+  instance_transforms: ${transforms.instance_transforms.inference}

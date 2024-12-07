@@ -1,0 +1,15 @@
+defaults:
+  - model: hifigan
+  - metrics: null
+  - datasets: custom_eval_on_text_cli
+  - dataloader: example_eval
+  - transforms: example_only_instance
+  - _self_
+
+inferencer:
+  device_tensors: ["mel_spectrogram"]
+  device: auto
+  save_path: "synthesized_text_from_cli"
+  seed: 42
+  target_sr: 22050
+  from_pretrained: "trained_models/hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero_resume_len22k/checkpoint-epoch460.pth"
