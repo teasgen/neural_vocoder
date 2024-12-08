@@ -1,103 +1,39 @@
-# PyTorch Template for DL projects
+<div align="center">
+
+# HiFiGAN by teasgen
+
+[\[🔥 Implementation Techinical Report\]]([src/docs/paper.pdf](https://wandb.ai/teasgen/vocoder/reports/HiFIGAN-by-teasgen--VmlldzoxMDUwNDY5Ng))
+
+</div>
 
 <p align="center">
   <a href="#about">About</a> •
-  <a href="#tutorials">Tutorials</a> •
-  <a href="#examples">Examples</a> •
   <a href="#installation">Installation</a> •
-  <a href="#how-to-use">How To Use</a> •
-  <a href="#useful-links">Useful Links</a> •
+  <a href="#how-to-train">How To Train</a> •
+  <a href="#how-to-evaluate">How To Evaluate</a> •
   <a href="#credits">Credits</a> •
   <a href="#license">License</a>
 </p>
 
-<p align="center">
-<a href="https://github.com/Blinorot/pytorch_project_template/generate">
-  <img src="https://img.shields.io/badge/use%20this-template-green?logo=github">
-</a>
-<a href="https://github.com/Blinorot/pytorch_project_template/blob/main/LICENSE">
-   <img src=https://img.shields.io/badge/license-MIT-blue.svg>
-</a>
-</p>
-
-import nltk
-nltk.download('averaged_perceptron_tagger_eng')
-
-
-
-
-
 ## About
 
-This repository contains a template for [PyTorch](https://pytorch.org/)-based Deep Learning projects.
-
-The template utilizes different python-dev techniques to improve code readability. Configuration methods enhance reproducibility and experiments control.
-
-The repository is released as a part of the [HSE DLA course](https://github.com/markovka17/dla), however, can easily be adopted for any DL-task.
-
-This template is the official recommended template for the [EPFL CS-433 ML Course](https://www.epfl.ch/labs/mlo/machine-learning-cs-433/).
-
-## Tutorials
-
-This template utilizes experiment tracking techniques, such as [WandB](https://docs.wandb.ai/) and [Comet ML](https://www.comet.com/docs/v2/), and [Hydra](https://hydra.cc/docs/intro/) for the configuration. It also automatically reformats code and conducts several checks via [pre-commit](https://pre-commit.com/). If you are not familiar with these tools, we advise you to look at the tutorials below:
-
-- [Python Dev Tips](https://github.com/ebezzam/python-dev-tips): information about [Git](https://git-scm.com/doc), [pre-commit](https://pre-commit.com/), [Hydra](https://hydra.cc/docs/intro/), and other stuff for better Python code development. The YouTube recording of the workshop is available [here](https://youtu.be/okxaTuBdDuY).
-
-- [Seminar on R&D Coding](https://youtu.be/sEA-Js5ZHxU): Seminar from the [LauzHack Deep Learning Bootcamp](https://github.com/LauzHack/deep-learning-bootcamp/) with template discussion and reasoning. It also explains how to work with [WandB](https://docs.wandb.ai/). The seminar materials can be found [here](https://github.com/LauzHack/deep-learning-bootcamp/blob/main/day03/Seminar_WandB_and_Coding.ipynb).
-
-- [HSE DLA Course Introduction Week](https://github.com/markovka17/dla/tree/2024/week01): combines the two seminars above into one with some updates, including an extra example for [Comet ML](https://www.comet.com/docs/v2/).
-
-- [PyTorch Basics](https://github.com/markovka17/dla/tree/2024/week01/intro_to_pytorch): several notebooks with [PyTorch](https://pytorch.org/docs/stable/index.html) basics and corresponding seminar recordings from the [LauzHack Deep Learning Bootcamp](https://github.com/LauzHack/deep-learning-bootcamp/).
-
-To start working with a template, just click on the `use this template` button.
-
-<a href="https://github.com/Blinorot/pytorch_project_template/generate">
-  <img src="https://img.shields.io/badge/use%20this-template-green?logo=github">
-</a>
-
-You can choose any of the branches as a starting point. [Set your choice as the default branch](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-branches-in-your-repository/changing-the-default-branch) in the repository settings. You can also [delete unnecessary branches](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-and-deleting-branches-within-your-repository).
-
-## Examples
-
-> [!IMPORTANT]
-> The main branch leaves some of the code parts empty or fills them with dummy examples, showing just the base structure. The final users can add code required for their own tasks.
-
-You can find examples of this template completed for different tasks in other branches:
-
-- [Image classification](https://github.com/Blinorot/pytorch_project_template/tree/example/image-classification): simple classification problem on [MNIST](https://yann.lecun.com/exdb/mnist/) and [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) datasets.
-
-- [ASR](https://github.com/Blinorot/pytorch_project_template/tree/example/asr): template for the automatic speech recognition (ASR) task. Some of the parts (for example, `collate_fn` and beam search for `text_encoder`) are missing for studying purposes of [HSE DLA course](https://github.com/markovka17/dla).
+This repository contains scripts for training and evaluation of HiFiGAN
 
 ## Installation
 
-Installation may depend on your task. The general steps are the following:
+Follow these steps to install the project:
 
-0. (Optional) Create and activate new environment using [`conda`](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) or `venv` ([`+pyenv`](https://github.com/pyenv/pyenv)).
-
-   a. `conda` version:
+0. (Optional) Create and activate new environment using [`conda`](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html).
 
    ```bash
    # create env
-   conda create -n project_env python=PYTHON_VERSION
+   conda create -n project_env python=3.10
 
    # activate env
    conda activate project_env
    ```
 
-   b. `venv` (`+pyenv`) version:
-
-   ```bash
-   # create env
-   ~/.pyenv/versions/PYTHON_VERSION/bin/python3 -m venv project_env
-
-   # alternatively, using default python version
-   python3 -m venv project_env
-
-   # activate env
-   source project_env
-   ```
-
-1. Install all required packages
+1. Install all required packages:
 
    ```bash
    pip install -r requirements.txt
@@ -108,37 +44,125 @@ Installation may depend on your task. The general steps are the following:
    pre-commit install
    ```
 
-## How To Use
+## How To Train
+You should have single A100-80gb GPU to exactly reproduce training, otherwise please implement and use gradient accumulation
 
-To train a model, run the following command:
+To train a model, run the following commands and register in WandB:
 
+Three-steps sequential training:
+- 8k context
 ```bash
-python3 train.py -cn=CONFIG_NAME HYDRA_CONFIG_ARGUMENTS
+python3 train.py -cn hifigan.yaml \
+  writer.run_name=hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero \
+  dataloader.batch_size=64 \
+  model.hu=512 \
+  trainer.n_epochs=200 \
+  +datasets.train.rand_split=True \
+  trainer.epoch_len=175
 ```
 
-Where `CONFIG_NAME` is a config from `src/configs` and `HYDRA_CONFIG_ARGUMENTS` are optional arguments.
-
-To run inference (evaluate the model or save predictions):
-
+- 22k context
 ```bash
-python3 inference.py HYDRA_CONFIG_ARGUMENTS
+python3 train.py -cn hifigan_cos_sheduler.yaml \
+  writer.run_name=hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero_resume_len22k \
+  dataloader.batch_size=32 \
+  model.hu=512 \
+  trainer.n_epochs=500 \
+  +datasets.train.rand_split=True \
+  trainer.epoch_len=350 \
+  datasets.train.audio_length_limit=22050 \
+  datasets.test.audio_length_limit=22050 \
+  trainer.resume_from=<PATH_TO_SAVING_DIR>/hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero/checkpoint-epoch60.pth
 ```
 
-## Useful Links:
+- 44k context
+```bash
+python3 train.py -cn hifigan_cos_sheduler_resume_low_lr.yaml \
+  writer.run_name=hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero_resume_2_len44k \
+  dataloader.batch_size=16 \
+  model.hu=512 \
+  trainer.n_epochs=550 \
+  +datasets.train.rand_split=True \
+  trainer.epoch_len=700 \
+  datasets.train.audio_length_limit=44100 \
+  datasets.test.audio_length_limit=44100 \
+  trainer.resume_from=<PATH_TO_SAVING_DIR>/hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero_resume_len22k/checkpoint-epoch460.pth
+```
 
-You may find the following links useful:
+Moreover, training logs are available in WandB
 
-- [Report branch](https://github.com/Blinorot/pytorch_project_template/tree/report): Guidelines for writing a scientific report/paper (with an emphasis on DL projects).
+- https://wandb.ai/teasgen/vocoder
 
-- [CLAIRE Template](https://github.com/CLAIRE-Labo/python-ml-research-template): additional template by [EPFL CLAIRE Laboratory](https://www.epfl.ch/labs/claire/) that can be combined with ours to enhance experiments reproducibility via [Docker](https://www.docker.com/).
+## How To Evaluate
 
-- [Mamba](https://github.com/mamba-org/mamba) and [Poetry](https://python-poetry.org/): alternatives to [Conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) and [pip](https://pip.pypa.io/en/stable/installation/) package managers given above.
+Best model could be downloaded by link https://drive.google.com/file/d/1xe3kqva4BiXi0hAGMBaqEiT795AE16hn/view?usp=sharing
+Or you may download it using CLI
 
-- [Awesome README](https://github.com/matiassingers/awesome-readme): a list of awesome README files for inspiration. Check the basics [here](https://github.com/PurpleBooth/a-good-readme-template).
+```bash
+gdown 1xe3kqva4BiXi0hAGMBaqEiT795AE16hn
+tar xvf hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero_resume_2_len44k.tar
+```
+The checkpoint will be saved into `<CURRENT_DIR>/hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero_resume_2_len44k/checkpoint-epoch550.pth`
+
+There are three types of evaluation
+
+### Reproduce the Wav using Mel-spectrogram.
+The input - directory with ground truth Wavs, the output - directory with generated Wavs. GT wav is being transformed to Mel-spectrogram and after using HiFiGAN-repack-by-teasgen transformed to Wav.
+The example of directory with GT wavs located in this repo
+- gt_wavs_js - LJSpeech dataset 5 random samples from test split
+- gt_wavs - dataset with 5 random long Wavs
+
+```bash
+python3 synthesize.py -cn inference.yaml \
+  inferencer.from_pretrained=hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero_resume_2_len44k/checkpoint-epoch550.pth \
+  inferencer.save_path=wav2wav_lj \
+  datasets.test.wav_dir=gt_wavs_lj
+```
+Generated wavs will be saved into `<CURRENT_DIR>/data/test/<inferencer.save_path>`
+Instead of `datasets.test.wav_dir=gt_wavs_lj` you may place custom dir: `datasets.test.wav_dir=<GT_WAVS_DIRNAME>`
+
+### Generate the Wav using text. Directory with texts version
+The input - directory with texts, the output - directory with generated Wavs. Text is being transformed to Mel-spectrogram using [Tacotron2](https://github.com/pytorch/hub/blob/master/nvidia_deeplearningexamples_waveglow.md#example) and after using HiFiGAN-repack-by-teasgen transformed to Wav.
+The example of directory with GT wavs located in this repo
+- test_data_text - transcriptions of `gt_wavs`
+  
+```bash
+python3 synthesize.py -cn synthesize.yaml \
+  inferencer.from_pretrained=hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero_resume_2_len44k/checkpoint-epoch550.pth \
+  inferencer.save_path=text_dir2wav \
+  datasets.test.transcription_dir=test_data_text
+```
+Generated wavs will be saved into `<CURRENT_DIR>/data/test/<inferencer.save_path>`
+Instead of `datasets.test.transcription_dir=test_data_text` you may place custom dir: `datasets.test.transcription_dir=<GT_WAVS_DIRNAME>`
+
+### Generate the Wav using text. Text in CLI version
+The input text is set via CLI, the output - directory with generated Wavs.
+
+```bash
+python3 synthesize.py -cn synthesize_text_cli.yaml\
+  inferencer.from_pretrained=hifigan_v1_my_v2_sr_22_05_len_8k_zero_to_hero_resume_2_len44k/checkpoint-epoch550.pth \
+  inferencer.save_path=text_cli2wav \
+  datasets.test.transcription="I am Vlad\, this is my pet project"
+```
+Generated wavs will be saved into `<CURRENT_DIR>/data/test/<inferencer.save_path>`
+
+### Neuro-MOS calculation
+I am using https://github.com/AndreevP/wvmos
+
+`wvmos` installation
+```bash
+pip install git+https://github.com/AndreevP/wvmos
+```
+
+Evaluation
+```bash
+python3 src/utils/mos_calculation.py --predicts-dir <PATH_TO_DIR_WITH_PREDICTIONS>
+```
+<PATH_TO_DIR_WITH_PREDICTIONS> is a directory with Wavs
 
 ## Credits
 
-This repository is based on a heavily modified fork of [pytorch-template](https://github.com/victoresque/pytorch-template) and [asr_project_template](https://github.com/WrathOfGrapes/asr_project_template) repositories.
+This repository is based on a [PyTorch Project Template](https://github.com/Blinorot/pytorch_project_template).
 
 ## License
 
