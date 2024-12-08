@@ -2,7 +2,7 @@
 
 # HiFiGAN by teasgen
 
-[\[🔥 Implementation Techinical Report\]]([src/docs/paper.pdf](https://wandb.ai/teasgen/vocoder/reports/HiFIGAN-by-teasgen--VmlldzoxMDUwNDY5Ng))
+[\[🔥 Implementation Techinical Report\]](https://wandb.ai/teasgen/vocoder/reports/HiFIGAN-by-teasgen--VmlldzoxMDUwNDY5Ng)
 
 </div>
 
